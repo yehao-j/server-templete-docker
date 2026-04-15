@@ -63,7 +63,7 @@ docker compose -f compose.dev.yaml exec backend sh
 docker compose up -d --build
 ```
 
-默认对外暴露前端 `5173` 端口，后端只在容器网络内提供给前端反向代理使用。
+默认对外暴露前端 `80` 端口，后端只在容器网络内提供给前端反向代理使用。
 
 ## 接口示例
 
