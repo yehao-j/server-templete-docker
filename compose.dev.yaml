@@ -1,0 +1,45 @@
+name: atomicserver-dev
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: dev
+    command: npm run dev --workspace backend
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      CLIENT_ORIGIN: http://127.0.0.1:5173
+      NODE_OPTIONS: --inspect=0.0.0.0:9229
+    ports:
+      - "3000:3000"
+      - "9229:9229"
+    volumes:
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./backend:/app/backend
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: dev
+    command: npm run dev --workspace frontend
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: development
+      VITE_HOST: 0.0.0.0
+      VITE_PORT: 5173
+      VITE_API_TARGET: http://backend:3000
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./frontend:/app/frontend
+    restart: unless-stopped
