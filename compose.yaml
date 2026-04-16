@@ -1,7 +1,18 @@
 name: atomicserver
 
 services:
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
   backend:
+    depends_on:
+      - redis
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -10,6 +21,7 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
+      REDIS_URL: redis://redis:6379
     expose:
       - "3000"
     restart: unless-stopped
@@ -24,3 +36,6 @@ services:
     ports:
       - "80:80"
     restart: unless-stopped
+
+volumes:
+  redis-data:

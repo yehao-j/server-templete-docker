@@ -4,6 +4,7 @@
 
 - 前端：Vue 3 + Vite
 - 后端：Express + TypeScript
+- 缓存：Redis
 - Node.js：24.14.1
 - Docker 基础镜像：`node:24.14.1-alpine`
 - 前端地址：`http://127.0.0.1:5173`
@@ -54,6 +55,7 @@ docker compose -f compose.dev.yaml exec backend sh
 
 - 已暴露调试端口 `9229`
 - 可直接使用 [.vscode/launch.json](/Users/niko/Desktop/AtomicServer/.vscode/launch.json) 里的 `Attach Backend in Docker`
+- Redis 默认暴露 `6379` 端口，后端通过 `redis://redis:6379` 访问
 
 ## Docker 生产
 
@@ -68,4 +70,5 @@ docker compose up -d --build
 ## 接口示例
 
 - 后端健康检查：`GET http://127.0.0.1:3000/api/health`
+- Redis 连通性测试：`GET http://127.0.0.1:3000/api/redis/test`
 - 前端开发环境通过 Vite 代理访问：`GET /api/health`

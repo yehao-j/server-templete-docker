@@ -1,45 +1,81 @@
 name: atomicserver-dev
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-      target: dev
-    command: npm run dev --workspace backend
-    environment:
-      NODE_ENV: development
-      HOST: 0.0.0.0
-      PORT: 3000
-      CLIENT_ORIGIN: http://127.0.0.1:5173
-      NODE_OPTIONS: --inspect=0.0.0.0:9229
-    ports:
-      - "3000:3000"
-      - "9229:9229"
-    volumes:
-      - ./package.json:/app/package.json
-      - ./package-lock.json:/app/package-lock.json
-      - ./backend:/app/backend
-    restart: unless-stopped
+    # 定义一个名字叫 backend 的服务，其他服务可以通过 backend 这个名字访问它
+    # 比如前端里配置了，VITE_API_TARGET: http://backend:3000，这里的 backend 就是这个服务名
+    backend:
+        # 表示这个服务的镜像不是直接用现成镜像，而是要自己构建
+        build:
+            # 以当前目录作为构建上下文
+            context: .
+            # 指定构建镜像时使用哪个 Dockerfile
+            dockerfile: backend/Dockerfile
+            # 如果 backend/Dockerfile 里定义了多个阶段，就只构建到 dev 这个阶段
+            target: dev
+        # 表示容器启动后执行的命令，不要在根目录 package.json 里执行 dev，而是到名为 backend 的那个 workspace 里执行它
+        # workspace 是执行上下文
+        command: npm run dev --workspace backend
+        depends_on:
+            - redis
+        # 给容器设置环境变量，这些变量会传给容器里的 Node.js 程序
+        environment:
+            # 告诉应用当前是开发环境
+            NODE_ENV: development
+            # 表示服务监听所有网络接口
+            # 容器之间默认会加入同一个网络，并且可以通过容器名互相访问，比如 backend:3000。但这个访问打到的是 backend 容器的网络地址，不是它容器内部的 127.0.0.1。所以如果你的后端只监听 127.0.0.1，那只有容器内部自己能访问，宿主机和其他容器都不能访问访问。监听 0.0.0.0 才能通过容器网卡接收请求
+            HOST: 0.0.0.0
+            PORT: 3000
+            # 告诉后端：“我的前端页面是从这个地址打开的，你要把它当成合法来源。
+            CLIENT_ORIGIN: http://127.0.0.1:5173
+            REDIS_URL: redis://redis:6379
+            # 调试端口，Node Inspector 默认端口就是 9229
+            NODE_OPTIONS: --inspect=0.0.0.0:9229
+        # 宿主机端口:容器端口
+        ports:
+            - "3000:3000"
+            - "9229:9229"
+        volumes:
+            # 把宿主机当前目录下的 package.json 挂到容器里的 /app/package.json
+            - ./package.json:/app/package.json
+            - ./package-lock.json:/app/package-lock.json
+            - ./backend:/app/backend
+        # 容器异常退出后自动重启，除非你手动把它停掉
+        restart: unless-stopped
 
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      target: dev
-    command: npm run dev --workspace frontend
-    depends_on:
-      - backend
-    environment:
-      NODE_ENV: development
-      VITE_HOST: 0.0.0.0
-      VITE_PORT: 5173
-      VITE_API_TARGET: http://backend:3000
-      CHOKIDAR_USEPOLLING: "true"
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./package.json:/app/package.json
-      - ./package-lock.json:/app/package-lock.json
-      - ./frontend:/app/frontend
-    restart: unless-stopped
+    redis:
+        image: redis:7.4-alpine
+        command: redis-server --appendonly yes
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis-data:/data
+        restart: unless-stopped
+
+    frontend:
+        build:
+            context: .
+            dockerfile: frontend/Dockerfile
+            target: dev
+        command: npm run dev --workspace frontend
+        # frontend 依赖 backend，Compose 在启动时会优先先启动 backend，再启动 frontend
+        depends_on:
+            - backend
+        environment:
+            NODE_ENV: development
+            # 让 Vite 开发服务器监听所有网络接口
+            VITE_HOST: 0.0.0.0
+            VITE_PORT: 5173
+            # 表示前端在容器内部要访问的后端地址
+            VITE_API_TARGET: http://backend:3000
+            # 用轮询方式检测文件变化，这样热更新更稳定，但会稍微多消耗一点资源
+            CHOKIDAR_USEPOLLING: "true"
+        ports:
+            - "5173:5173"
+        volumes:
+            - ./package.json:/app/package.json
+            - ./package-lock.json:/app/package-lock.json
+            - ./frontend:/app/frontend
+        restart: unless-stopped
+
+volumes:
+    redis-data:
