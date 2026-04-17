@@ -27,6 +27,7 @@ RUN npm run build --workspace frontend
 FROM nginx:1.27-alpine AS prod
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# 拷贝到nginx指定的目录下
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
 EXPOSE 80

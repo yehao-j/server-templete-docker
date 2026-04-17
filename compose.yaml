@@ -17,6 +17,8 @@ services:
       context: .
       dockerfile: backend/Dockerfile
       target: prod
+    env_file:
+      - ./backend/.env
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

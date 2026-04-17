@@ -17,6 +17,8 @@ services:
         command: npm run dev --workspace backend
         depends_on:
             - redis
+        env_file:
+            - ./backend/.env.dev
         # 给容器设置环境变量，这些变量会传给容器里的 Node.js 程序
         environment:
             # 告诉应用当前是开发环境
